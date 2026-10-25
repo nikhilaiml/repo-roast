@@ -1,6 +1,13 @@
 import streamlit as st
 import requests
 import time
+import os
+
+# --- BACKEND URL FIX (Render wala) ---
+try:
+    BACKEND_URL = st.secrets.get("BACKEND_URL", os.getenv("BACKEND_URL", "http://127.0.0.1:8000"))
+except:
+    BACKEND_URL = os.getenv("BACKEND_URL", "http://127.0.0.1:8000")
 
 st.set_page_config(page_title="RepoRoast — 【entity-GitHub¦canonical_name=GitHub】 Analyzer", page_icon="🔥", layout="wide", initial_sidebar_state="collapsed")
 
@@ -10,8 +17,6 @@ st.markdown("""
 * { font-family: 'Inter', sans-serif; }
 .stApp { background: #0d1117; color: #e6edf3; }
 #MainMenu, footer, header { visibility: hidden; }
-
-/* Cards - 【entity-GitHub¦canonical_name=GitHub】 style */
 .card {
     background: #161b22;
     border: 1px solid #30363d;
@@ -20,23 +25,15 @@ st.markdown("""
 }
 .card:hover { border-color: #484f58; }
 .card-title { font-size: 13px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; color: #8b949e; margin-bottom: 12px; }
-
-/* Metric */
 .metric-value { font-size: 28px; font-weight: 700; color: #e6edf3; }
 .metric-label { font-size: 12px; color: #8b949e; margin-top: 4px; }
-
-/* Input */
 div[data-baseweb="input"] { background: #0d1117 !important; border: 1px solid #30363d !important; border-radius: 8px !important; }
 div[data-baseweb="input"]:focus-within { border-color: #1f6feb !important; box-shadow: 0 0 0 3px rgba(31,111,235,0.3) !important; }
-
-/* Button */
 .stButton>button {
     background: #f5f5f5; color: #0d1117; border: 1px solid #30363d;
     border-radius: 8px; padding: 8px 20px; font-weight: 600; font-size: 14px;
 }
 .stButton>button:hover { background: #ffffff; border-color: #8b949e; }
-
-/* Roast - blockquote style */
 .roast {
     border-left: 3px solid #f97316;
     background: #161b22;
@@ -44,14 +41,11 @@ div[data-baseweb="input"]:focus-within { border-color: #1f6feb !important; box-s
     border-radius: 0 8px 8px 0;
     font-size: 15px; line-height: 1.6;
 }
-
-/* Security states */
 .safe { border-color: #238636 !important; }
 .risk { border-color: #da3633 !important; }
 </style>
 """, unsafe_allow_html=True)
 
-# HEADER - Minimal
 st.markdown("""
 <div style="max-width: 1100px; margin: 0 auto; padding: 32px 0 24px 0; border-bottom: 1px solid #21262d;">
     <div style="display:flex; align-items:center; justify-content:space-between;">
@@ -65,10 +59,8 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# MAIN CONTAINER
 st.markdown('<div style="max-width: 1100px; margin: 0 auto; padding-top: 32px;">', unsafe_allow_html=True)
 
-# Input Row
 c1, c2 = st.columns([4, 1])
 with c1:
     repo_url = st.text_input("repo", placeholder="https://github.com/username/repository", label_visibility="collapsed")
@@ -83,7 +75,7 @@ if roast_btn and repo_url:
             st.write("Fetching files from 【entity-GitHub¦canonical_name=GitHub】...")
             time.sleep(0.5)
             st.write("Running radon, lizard, security scan...")
-            res = requests.get(f"http://127.0.0.1:8000/analyze?repo_url={repo_url}", timeout=90)
+            res = requests.get(f"{BACKEND_URL}/analyze?repo_url={repo_url}", timeout=90)
             data = res.json()
             status.update(label="Analysis complete", state="complete", expanded=False)
 
@@ -91,23 +83,18 @@ if roast_btn and repo_url:
             st.error(data["detail"])
         else:
             score = data.get("score", data.get("health_score", 0))
-            # METRICS - Clean
             m1, m2, m3, m4 = st.columns(4)
             m1.markdown(f'<div class="card"><div class="card-title">Health Score</div><div class="metric-value">{score}/100</div><div class="metric-label">{"Excellent" if score>=80 else "Needs work" if score<50 else "Good"}</div></div>', unsafe_allow_html=True)
-            m2.markdown(f'<div class="card"><div class="card-title">Stars</div><div class="metric-value">{data.get("stars",0)}</div><div class="metric-label">GitHub</div></div>', unsafe_allow_html=True)
+            m2.markdown(f'<div class="card"><div class="card-title">Stars</div><div class="metric-value">{data.get("stars",0)}</div><div class="metric-label">【entity-GitHub¦canonical_name=GitHub】</div></div>', unsafe_allow_html=True)
             m3.markdown(f'<div class="card"><div class="card-title">Files</div><div class="metric-value">{data.get("file_count",0)}</div><div class="metric-label">Python files</div></div>', unsafe_allow_html=True)
             m4.markdown(f'<div class="card"><div class="card-title">Lines</div><div class="metric-value">{data.get("total_lines",0)}</div><div class="metric-label">Total LOC</div></div>', unsafe_allow_html=True)
 
             st.markdown("<div style='height:24px'></div>", unsafe_allow_html=True)
-
-            # ROAST
             repo_name = data.get("repo", repo_url.replace("https://github.com/", ""))
             roast_text = data.get("roast", {}).get("one_liner", "") if isinstance(data.get("roast"), dict) else str(data.get("roast",""))
             st.markdown(f'<div class="card"><div class="card-title">Roast — {repo_name}</div><div class="roast">{roast_text}</div></div>', unsafe_allow_html=True)
-
             st.markdown("<div style='height:24px'></div>", unsafe_allow_html=True)
 
-            # GRID
             left, right = st.columns(2)
             with left:
                 st.markdown('<div class="card">', unsafe_allow_html=True)
